@@ -5,6 +5,12 @@
 //           Execute as: Me | Who has access: Anyone
 // ============================================================
 
+const SPREADSHEET_ID = '1l4BJct9oesnkxiqe7rHxtdJ8Q1ltItb1AAU7qdUGQ_Y';
+
+function getSpreadsheet() {
+  return SpreadsheetApp.openById(SPREADSHEET_ID);
+}
+
 function doGet(e) {
   const action = e.parameter.action;
   let result;
@@ -54,7 +60,7 @@ function doPost(e) {
 
 // --- ส่วนจัดการข้อมูลการแนะแนว (Guidance Visits) ---
 function getOrCreateVisitsSheet() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = getSpreadsheet();
   let sheet = ss.getSheetByName('GuidanceVisits');
   if (!sheet) {
     sheet = ss.insertSheet('GuidanceVisits');
@@ -205,7 +211,7 @@ function deleteVisit(id) {
 
 // --- ส่วนจัดการ Config ดั้งเดิม (เผื่อใช้งาน) ---
 function saveConfig(lat, lng, radius) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = getSpreadsheet();
   let sheet = ss.getSheetByName('Config');
 
   if (!sheet) {
@@ -225,7 +231,7 @@ function saveConfig(lat, lng, radius) {
 }
 
 function getConfig() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = getSpreadsheet();
   const sheet = ss.getSheetByName('Config');
 
   let config = { lat: 0, lng: 0, radius: 0.5 };
