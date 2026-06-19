@@ -266,6 +266,16 @@
       background: #e2e8f0;
       color: var(--text);
     }
+    .btn-danger {
+      background: rgba(239, 68, 68, 0.08);
+      color: var(--danger);
+      border: 1px solid rgba(239, 68, 68, 0.25);
+    }
+    .btn-danger:hover {
+      background: var(--danger);
+      color: white;
+      box-shadow: 0 4px 12px rgba(239, 68, 68, 0.25);
+    }
 
     /* Visits List */
     .visits-container {
@@ -999,7 +1009,7 @@
             <button class="btn btn-secondary" style="padding:8px 12px; font-size:12px;" onclick="openEditModal('${v.ID}')">
               ✏️ แก้ไข
             </button>
-            <button class="btn btn-secondary" style="padding:8px 12px; font-size:12px; color:var(--danger); border-color:rgba(239,68,68,0.2);" onclick="deleteVisitRecord('${v.ID}', '${v.SchoolName}')">
+            <button class="btn btn-danger" style="padding:8px 12px; font-size:12px;" onclick="deleteVisitRecord('${v.ID}', '${v.SchoolName}')">
               🗑️ ลบ
             </button>
           </div>
