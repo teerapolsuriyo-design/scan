@@ -805,7 +805,7 @@
         if (!provObj) return;
 
         distSelect.disabled = false;
-        provObj.amphure.forEach(d => {
+        provObj.districts.forEach(d => {
           const opt = document.createElement('option');
           opt.value = d.name_th;
           opt.textContent = d.name_th;
@@ -826,11 +826,11 @@
         const provObj = provincesData.find(p => p.name_th === provName);
         if (!provObj) return;
 
-        const distObj = provObj.amphure.find(d => d.name_th === distName);
+        const distObj = provObj.districts.find(d => d.name_th === distName);
         if (!distObj) return;
 
         subSelect.disabled = false;
-        distObj.sub_district.forEach(s => {
+        distObj.sub_districts.forEach(s => {
           const opt = document.createElement('option');
           opt.value = s.name_th;
           opt.textContent = s.name_th;
