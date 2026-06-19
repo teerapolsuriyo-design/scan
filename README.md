@@ -55,10 +55,10 @@ GAS-attendance-facescanner-with-gps-V2-main/
 
 ### ขั้นตอนที่ 1 — ตั้งค่า Google Sheets & Apps Script
 
-1. สร้าง **Google Sheets** ใหม่ขึ้นมา (หรือใช้ไฟล์ชีตเดิมก็ได้)
+1. เปิด **Google Sheets** ลิ้งค์นี้: `https://docs.google.com/spreadsheets/d/1l4BJct9oesnkxiqe7rHxtdJ8Q1ltItb1AAU7qdUGQ_Y/edit`
 2. ไปที่เมนูด้านบนเลือก **Extensions (ส่วนขยาย) → Apps Script**
-3. ลบโค้ดเดิมทั้งหมดในไฟล์ `รหัส.gs` หรือ `code.gs` ออก
-4. **คัดลอกโค้ดทั้งหมดจากไฟล์ `code.gs` ในโปรเจกต์นี้ไปวางแทนที่**
+3. ลบโค้ดเดิมทั้งหมดออก
+4. **คัดลอกโค้ดทั้งหมดจากไฟล์ `code.gs` ในโปรเจกต์นี้ไปวางแทนที่** (โค้ดนี้ถูกตั้งค่าล่วงหน้าให้เชื่อมโยงกับ Spreadsheet ID `1l4BJct9oesnkxiqe7rHxtdJ8Q1ltItb1AAU7qdUGQ_Y` ของคุณแล้ว หากต้องการเปลี่ยนไปใช้ชีตอื่นในภายหลัง สามารถแก้ไขค่าตัวแปร `SPREADSHEET_ID` ที่อยู่ด้านบนสุดของสคริปต์ได้)
 5. คลิก **Save** (ไอคอนแผ่นดิสก์)
 6. คลิกที่ปุ่ม **Deploy (การเปิดใช้) → New deployment (การใช้งานใหม่)**
    - เลือกประเภทการตั้งค่า (ฟันเฟือง) เป็น: **Web app (แอปพลิเคชันเว็บ)**
