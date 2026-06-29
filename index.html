@@ -4,8 +4,20 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>ระบบติดตามการเข้าแนะแนวโรงเรียน</title>
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=Sarabun:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <link href="https://script.google.com/macros/s/AKfycbyKNlLkjosKTl___FZDHVze5wC_li7BDJIzYmpsvl9K68bRs2Dxx3Wnv36AnAXZ67hY/exec" rel="stylesheet">
+  <script src="js/schools-db.js"></script>
   <script src="js/api-config.js"></script>
+  <script>
+    // Fallback if api-config.js failed to load (e.g. running directly in Apps Script Web App)
+    if (typeof GAS_API_URL === 'undefined') {
+      var GAS_API_URL = 'https://script.google.com/macros/s/AKfycbwQTj-P0cHxyoaWORGe9mFYX8aUyivUUgnNvWqssmZA-v7xqSnthdpx9ukaJ3kQtsKG/exec';
+    }
+    // Override if running inside Google Apps Script server (evaluating webAppUrl)
+    const serverUrl = '<?= typeof webAppUrl !== "undefined" ? webAppUrl : "" ?>';
+    if (serverUrl.startsWith('http')) {
+      GAS_API_URL = serverUrl;
+    }
+  </script>
   <style>
     :root {
       --primary: #4f46e5;
@@ -160,6 +172,7 @@
     .stat-card.completed { border-left-color: var(--success); }
     .stat-card.pending { border-left-color: var(--warning); }
     .stat-card.canceled { border-left-color: var(--danger); }
+    .stat-card.info { border-left-color: var(--info); }
     
     .stat-icon {
       width: 48px;
@@ -360,6 +373,14 @@
       align-items: center;
       gap: 5px;
     }
+    .visit-teacher {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-top: 4px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
     .visit-notes {
       font-size: 13px;
       background: var(--bg);
@@ -512,9 +533,209 @@
     .empty-state-icon {
       font-size: 50px;
     }
+
+    /* Login Overlay */
+    .login-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: radial-gradient(circle at top right, #312e81 0%, #0f172a 100%);
+      z-index: 10000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      transition: opacity 0.4s ease, visibility 0.4s;
+    }
+    .login-overlay.hidden {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+    .login-card {
+      background: rgba(255, 255, 255, 0.08);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: var(--radius-lg);
+      padding: 40px 30px;
+      width: 100%;
+      max-width: 420px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+      color: white;
+      text-align: center;
+    }
+    .login-logo {
+      font-size: 40px;
+      margin-bottom: 15px;
+    }
+    .login-title {
+      font-size: 22px;
+      font-weight: 700;
+      margin-bottom: 5px;
+      letter-spacing: -0.5px;
+    }
+    .login-subtitle {
+      font-size: 13px;
+      opacity: 0.7;
+      margin-bottom: 30px;
+    }
+    .login-form-group {
+      text-align: left;
+      margin-bottom: 20px;
+    }
+    .login-form-group label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      margin-bottom: 6px;
+      opacity: 0.9;
+    }
+    .login-input {
+      width: 100%;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: var(--radius-md);
+      padding: 12px 16px;
+      color: white;
+      font-family: inherit;
+      font-size: 14px;
+      outline: none;
+      transition: var(--transition);
+    }
+    .login-input:focus {
+      border-color: var(--primary-light);
+      background: rgba(255, 255, 255, 0.15);
+      box-shadow: 0 0 0 4px rgba(129, 140, 248, 0.25);
+    }
+    .login-btn {
+      width: 100%;
+      background: var(--primary);
+      color: white;
+      border: none;
+      border-radius: var(--radius-md);
+      padding: 14px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: var(--transition);
+      margin-top: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .login-btn:hover {
+      background: var(--primary-light);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+    }
+    .login-btn:active {
+      transform: translateY(0);
+    }
+    
+    /* Header layout modifications */
+    .header-btns {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 15px;
+    }
+    .user-info-text {
+      font-size: 13px;
+      font-weight: 600;
+      background: rgba(255, 255, 255, 0.15);
+      padding: 6px 14px;
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    /* User management table */
+    .users-table-container {
+      overflow-x: auto;
+      margin-top: 15px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+    }
+    .users-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      text-align: left;
+    }
+    .users-table th, .users-table td {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    .users-table th {
+      background: var(--bg);
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+    .users-table tr:last-child td {
+      border-bottom: none;
+    }
+    .users-table tr:hover {
+      background: #f8fafc;
+    }
   </style>
 </head>
 <body>
+
+  <!-- Login Screen Overlay -->
+  <div id="loginOverlay" class="login-overlay hidden">
+    <div class="login-card">
+      <div class="login-logo">🏢</div>
+      <div class="login-title">วิทยาลัยอาชีวศึกษาการท่องเที่ยวฯ</div>
+      <div class="login-subtitle">ระบบบันทึกข้อมูลการเข้าแนะแนวโรงเรียน</div>
+      
+      <!-- Login Form -->
+      <form id="loginForm" onsubmit="handleLogin(event)">
+        <div class="login-form-group">
+          <label for="loginUser">ชื่อผู้ใช้งาน (Username)</label>
+          <input type="text" id="loginUser" class="login-input" placeholder="กรอกชื่อผู้ใช้งาน" required autocomplete="username">
+        </div>
+        <div class="login-form-group">
+          <label for="loginPass">รหัสผ่าน (Password)</label>
+          <input type="password" id="loginPass" class="login-input" placeholder="กรอกรหัสผ่าน" required autocomplete="current-password">
+        </div>
+        <button type="submit" class="login-btn" id="btnLoginSubmit">
+          🔑 เข้าสู่ระบบ
+        </button>
+        <div style="margin-top: 20px; font-size: 13px;">
+          ยังไม่มีบัญชีผู้ใช้งาน? <a href="#" onclick="showRegisterForm(event)" style="color: var(--primary-light); text-decoration: none; font-weight: 600;">ลงทะเบียนที่นี่</a>
+        </div>
+      </form>
+
+      <!-- Registration Form (hidden by default) -->
+      <form id="registerForm" onsubmit="handleRegister(event)" style="display: none;">
+        <div class="login-form-group">
+          <label for="regUser">ชื่อผู้ใช้งาน (Username) <span style="color: var(--danger)">*</span></label>
+          <input type="text" id="regUser" class="login-input" placeholder="ตัวอักษรภาษาอังกฤษหรือตัวเลข" required autocomplete="username">
+        </div>
+        <div class="login-form-group">
+          <label for="regPass">รหัสผ่าน (Password) <span style="color: var(--danger)">*</span></label>
+          <input type="password" id="regPass" class="login-input" placeholder="ความยาวอย่างน้อย 4 ตัวอักษร" required autocomplete="new-password">
+        </div>
+        <div class="login-form-group">
+          <label for="regName">ชื่อแสดงผล (Name) <span style="color: var(--danger)">*</span></label>
+          <input type="text" id="regName" class="login-input" placeholder="เช่น อ.สมชาย ใจดี" required>
+        </div>
+        <button type="submit" class="login-btn" id="btnRegisterSubmit" style="background: var(--success);">
+          📝 ลงทะเบียนและเข้าสู่ระบบ
+        </button>
+        <div style="margin-top: 20px; font-size: 13px;">
+          มีบัญชีอยู่แล้ว? <a href="#" onclick="showLoginForm(event)" style="color: var(--primary-light); text-decoration: none; font-weight: 600;">เข้าสู่ระบบที่นี่</a>
+        </div>
+      </form>
+    </div>
+  </div>
 
   <!-- Loading Screen -->
   <div id="loadingOverlay" class="loading-overlay">
@@ -531,7 +752,10 @@
       <p>ระบบบันทึกและตรวจสอบข้อมูลการเข้าแนะแนวโรงเรียน</p>
     </div>
     <div class="header-btns">
+      <span id="userInfo" class="user-info-text" style="display: none;">👤 <span id="userNameDisplay">ผู้ใช้งาน</span></span>
+      <button id="btnManageUsers" class="btn-icon" style="display: none;" onclick="openUsersModal()">👥 จัดการผู้ใช้งาน</button>
       <button class="btn-icon" onclick="openSettingsModal()">⚙️ ตั้งค่า API</button>
+      <button id="btnLogout" class="btn-icon" style="display: none;" onclick="handleLogout()">🚪 ออกจากระบบ</button>
     </div>
   </header>
 
@@ -558,6 +782,13 @@
         <div class="stat-info">
           <span class="val" id="statPending">0</span>
           <span class="lbl">รอดำเนินการ / ประสานงาน</span>
+        </div>
+      </div>
+      <div class="stat-card info">
+        <div class="stat-icon">🚫</div>
+        <div class="stat-info">
+          <span class="val" id="statNotGuided">0</span>
+          <span class="lbl">ยังไม่เข้าแนะแนว</span>
         </div>
       </div>
       <div class="stat-card canceled">
@@ -605,6 +836,7 @@
             <option value="เข้าแนะแนวแล้ว">เข้าแนะแนวแล้ว</option>
             <option value="กำลังประสานงาน">กำลังประสานงาน</option>
             <option value="รอดำเนินการ">รอดำเนินการ</option>
+            <option value="ยังไม่เข้าแนะแนว">ยังไม่เข้าแนะแนว</option>
             <option value="ยกเลิก">ยกเลิก</option>
           </select>
         </div>
@@ -668,9 +900,21 @@
             <select id="formStatus">
               <option value="รอดำเนินการ">รอดำเนินการ</option>
               <option value="กำลังประสานงาน">กำลังประสานงาน</option>
+              <option value="ยังไม่เข้าแนะแนว">ยังไม่เข้าแนะแนว</option>
               <option value="เข้าแนะแนวแล้ว">เข้าแนะแนวแล้ว</option>
               <option value="ยกเลิก">ยกเลิก</option>
             </select>
+          </div>
+        </div>
+
+        <div class="form-row-2">
+          <div class="form-group">
+            <label>ชื่อครูโรงเรียน (ผู้ประสานงาน)</label>
+            <input type="text" id="formTeacher" placeholder="เช่น ครูสมจิตร วงศ์ดี">
+          </div>
+          <div class="form-group">
+            <label>เบอร์โทรศัพท์ครู</label>
+            <input type="text" id="formPhone" placeholder="เช่น 081-234-5678">
           </div>
         </div>
 
@@ -724,30 +968,163 @@
     </div>
   </div>
 
+  <!-- Manage Users Modal -->
+  <div id="usersModal" class="modal">
+    <div class="modal-content" style="max-width: 650px;">
+      <div class="modal-header">
+        <h3>👥 จัดการผู้ใช้งาน</h3>
+        <button class="modal-close" onclick="closeUsersModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+          <p style="font-size: 13px; color: var(--text-muted); margin:0;">รายชื่อบัญชีผู้ใช้งานที่สามารถเข้าระบบได้</p>
+          <button class="btn btn-primary" style="padding: 8px 14px; font-size:13px;" onclick="openAddUserModal()">➕ เพิ่มผู้ใช้งานใหม่</button>
+        </div>
+        
+        <div class="users-table-container">
+          <table class="users-table">
+            <thead>
+              <tr>
+                <th>ชื่อผู้ใช้ (Username)</th>
+                <th>ชื่อแสดงผล (Name)</th>
+                <th>บทบาท (Role)</th>
+                <th style="text-align:right;">การจัดการ</th>
+              </tr>
+            </thead>
+            <tbody id="usersListBody">
+              <!-- ป้อนโดย JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeUsersModal()">ปิดหน้าต่าง</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add/Edit User Modal -->
+  <div id="userFormModal" class="modal">
+    <div class="modal-content" style="max-width: 400px;">
+      <div class="modal-header">
+        <h3 id="userFormModalTitle">เพิ่มผู้ใช้งานใหม่</h3>
+        <button class="modal-close" onclick="closeUserFormModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="userFormMode" value="add"> <!-- add or edit -->
+        
+        <div class="form-group">
+          <label>ชื่อผู้ใช้งาน (Username) <span style="color:var(--danger)">*</span></label>
+          <input type="text" id="userFormUsername" placeholder="เช่น somchai_d">
+        </div>
+        
+        <div class="form-group">
+          <label>รหัสผ่าน (Password) <span style="color:var(--danger)">*</span></label>
+          <input type="password" id="userFormPassword" placeholder="ความยาวอย่างน้อย 4 ตัวอักษร">
+        </div>
+        
+        <div class="form-group">
+          <label>ชื่อแสดงผล (Name) <span style="color:var(--danger)">*</span></label>
+          <input type="text" id="userFormName" placeholder="เช่น อ.สมชาย ดีเลิศ">
+        </div>
+        
+        <div class="form-group">
+          <label>บทบาท (Role) <span style="color:var(--danger)">*</span></label>
+          <select id="userFormRole">
+            <option value="User">User (ผู้ใช้งานทั่วไป)</option>
+            <option value="Admin">Admin (ผู้ดูแลระบบ)</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeUserFormModal()">ยกเลิก</button>
+        <button class="btn btn-primary" id="btnSubmitUserForm" onclick="submitUserForm()">💾 บันทึกข้อมูล</button>
+      </div>
+    </div>
+  </div>
+
   <script>
-    let API_URL = localStorage.getItem('gasApiUrl') || GAS_API_URL;
+    // Safe storage wrapper to prevent crash in cross-origin iframe sandboxes
+    const safeStorage = {
+      getItem(key) {
+        try {
+          return localStorage.getItem(key);
+        } catch (e) {
+          return this._memory[key] || null;
+        }
+      },
+      setItem(key, value) {
+        try {
+          localStorage.setItem(key, value);
+        } catch (e) {
+          this._memory[key] = value;
+        }
+      },
+      removeItem(key) {
+        try {
+          localStorage.removeItem(key);
+        } catch (e) {
+          delete this._memory[key];
+        }
+      },
+      _memory: {}
+    };
+
+    const safeSession = {
+      getItem(key) {
+        try {
+          return sessionStorage.getItem(key);
+        } catch (e) {
+          return this._memory[key] || null;
+        }
+      },
+      setItem(key, value) {
+        try {
+          sessionStorage.setItem(key, value);
+        } catch (e) {
+          this._memory[key] = value;
+        }
+      },
+      removeItem(key) {
+        try {
+          sessionStorage.removeItem(key);
+        } catch (e) {
+          delete this._memory[key];
+        }
+      },
+      _memory: {}
+    };
+
+    let API_URL = safeStorage.getItem('gasApiUrl') || GAS_API_URL;
     let allVisits = [];
     let provincesData = []; // Store the full nested geography data
+    let allUsers = []; // Store all users for CRUD
+    let currentUser = null; // Store current logged in user details
 
     window.addEventListener('load', async () => {
       // 1. Configure settings input default value
       document.getElementById('settingsUrl').value = API_URL;
       
-      // 2. Load Thailand geography data
+      // 2. Check session state
+      checkSession();
+      
+      // 3. Load Thailand geography data
       await loadGeographyData();
 
-      // 3. Set default date to today
+      // 4. Set default date to today
       const today = new Date().toISOString().split('T')[0];
       document.getElementById('formDate').value = today;
 
-      // 4. Fetch visits from API
-      fetchVisits();
+      // 5. Fetch visits from API (only if logged in)
+      if (currentUser) {
+        fetchVisits();
+      }
     });
 
     // ===== GEOGRAPHY DATA LOADER (Cascading Dropdowns) =====
     async function loadGeographyData() {
       const cacheKey = 'thai_provinces_district_subdistrict';
-      const cachedData = localStorage.getItem(cacheKey);
+      const cachedData = safeStorage.getItem(cacheKey);
 
       if (cachedData) {
         try {
@@ -767,7 +1144,7 @@
         provincesData = await response.json();
         
         // Cache data
-        localStorage.setItem(cacheKey, JSON.stringify(provincesData));
+        safeStorage.setItem(cacheKey, JSON.stringify(provincesData));
         initGeographyDropdowns();
       } catch (err) {
         alert("⚠️ เกิดข้อผิดพลาดในการโหลดข้อมูล จังหวัด/อำเภอ/ตำบล: " + err.message + "\nระบบจะยังคงทำงานได้แต่ไม่มี dropdown แนะนำที่อยู่แบบอัตโนมัติ");
@@ -899,7 +1276,7 @@
 
     async function fetchVisits() {
       const visitsListDiv = document.getElementById('visitsList');
-      if (!API_URL) {
+      if (!API_URL && !(typeof google !== 'undefined' && google.script)) {
         visitsListDiv.innerHTML = `
           <div class="empty-state">
             <span class="empty-state-icon">⚠️</span>
@@ -919,15 +1296,7 @@
       `;
 
       try {
-        const response = await fetch(`${API_URL}?action=getVisits`);
-        if (!response.ok) throw new Error("ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้");
-        
-        allVisits = await response.json();
-        
-        if (allVisits.error) {
-          throw new Error(allVisits.error);
-        }
-
+        allVisits = await callServer('getVisits');
         renderVisitsList(allVisits);
         updateStatistics(allVisits);
       } catch (err) {
@@ -1002,6 +1371,7 @@
             <div class="visit-school">${v.SchoolName}</div>
             <div class="visit-location">📍 ต.${v.Subdistrict} อ.${v.District} จ.${v.Province}</div>
             <div class="visit-counselor">🧑‍🏫 ผู้แนะแนว: ${v.LectorName}</div>
+            <div class="visit-teacher">📞 ครูประสานงาน: ${v.Teacher || '-'} ${v.Phone ? `(${v.Phone})` : ''}</div>
             ${notesBox}
           </div>
           <div class="visit-right">
@@ -1022,6 +1392,7 @@
       document.getElementById('statTotal').innerText = visits.length;
       document.getElementById('statDone').innerText = visits.filter(v => v.Status === 'เข้าแนะแนวแล้ว').length;
       document.getElementById('statPending').innerText = visits.filter(v => v.Status === 'รอดำเนินการ' || v.Status === 'กำลังประสานงาน').length;
+      document.getElementById('statNotGuided').innerText = visits.filter(v => v.Status === 'ยังไม่เข้าแนะแนว').length;
       document.getElementById('statCanceled').innerText = visits.filter(v => v.Status === 'ยกเลิก').length;
     }
 
@@ -1073,6 +1444,8 @@
       document.getElementById('modalTitle').innerText = "บันทึกข้อมูลการเข้าแนะแนวใหม่";
       document.getElementById('visitId').value = "";
       document.getElementById('formSchoolName').value = "";
+      document.getElementById('formTeacher').value = "";
+      document.getElementById('formPhone').value = "";
       document.getElementById('formProvince').value = "";
       document.getElementById('formProvince').dispatchEvent(new Event('change'));
       
@@ -1082,7 +1455,7 @@
       document.getElementById('formStatus').value = "รอดำเนินการ";
       
       // Auto-populate LectorName from cache if available
-      const savedLector = localStorage.getItem('last_lector_name');
+      const savedLector = safeStorage.getItem('last_lector_name');
       if (savedLector) {
         document.getElementById('formLectorName').value = savedLector;
       } else {
@@ -1115,6 +1488,8 @@
       document.getElementById('modalTitle').innerText = "แก้ไขข้อมูลการเข้าแนะแนว";
       document.getElementById('visitId').value = visit.ID;
       document.getElementById('formSchoolName').value = visit.SchoolName;
+      document.getElementById('formTeacher').value = visit.Teacher || "";
+      document.getElementById('formPhone').value = visit.Phone || "";
 
       // Setup locations drop downs
       setCascadingValues(
@@ -1148,6 +1523,8 @@
       const subdistrict = document.getElementById('formSubdistrict').value;
       const date = document.getElementById('formDate').value;
       const status = document.getElementById('formStatus').value;
+      const teacher = document.getElementById('formTeacher').value.trim();
+      const phone = document.getElementById('formPhone').value.trim();
       const lectorName = document.getElementById('formLectorName').value.trim();
       const notes = document.getElementById('formNotes').value.trim();
       const lat = document.getElementById('formLat').value;
@@ -1159,40 +1536,30 @@
       }
 
       // Save lector name for next time convenience
-      localStorage.setItem('last_lector_name', lectorName);
+      safeStorage.setItem('last_lector_name', lectorName);
 
       const btnSubmit = document.getElementById('btnSubmit');
       btnSubmit.disabled = true;
       btnSubmit.innerText = "กำลังบันทึก...";
 
       const action = id ? 'updateVisit' : 'addVisit';
-      const bodyData = {
-        action,
-        id,
-        schoolName,
-        province,
-        district,
-        subdistrict,
-        date,
-        status,
-        lectorName,
-        notes,
-        lat,
-        lng
-      };
 
       try {
-        const response = await fetch(API_URL, {
-          method: 'POST',
-          body: JSON.stringify(bodyData)
+        await callServer(action, {
+          id,
+          schoolName,
+          province,
+          district,
+          subdistrict,
+          date,
+          status,
+          teacher,
+          phone,
+          lectorName,
+          notes,
+          lat,
+          lng
         });
-
-        if (!response.ok) throw new Error("ไม่สามารถบันทึกข้อมูลกับ Server ได้");
-        const resData = await response.json();
-
-        if (resData.error) {
-          throw new Error(resData.error);
-        }
 
         alert("✅ บันทึกข้อมูลเรียบร้อยแล้ว");
         closeVisitModal();
@@ -1211,21 +1578,7 @@
       }
 
       try {
-        const response = await fetch(API_URL, {
-          method: 'POST',
-          body: JSON.stringify({
-            action: 'deleteVisit',
-            id: id
-          })
-        });
-
-        if (!response.ok) throw new Error("ไม่สามารถลบข้อมูลกับ Server ได้");
-        const resData = await response.json();
-
-        if (resData.error) {
-          throw new Error(resData.error);
-        }
-
+        await callServer('deleteVisit', { id });
         alert("✅ ลบข้อมูลสำเร็จ");
         fetchVisits();
       } catch (err) {
@@ -1250,11 +1603,406 @@
         return;
       }
 
-      localStorage.setItem('gasApiUrl', urlVal);
+      safeStorage.setItem('gasApiUrl', urlVal);
       API_URL = urlVal;
-      alert("✅ บันทึกการตั้งค่าสำเร็จ ระบบจะโหลดข้อมูลใหม่");
+      alert("✅ บันทึกการตั้งค่าสำเร็จ");
       closeSettingsModal();
-      fetchVisits();
+      if (currentUser) {
+        fetchVisits();
+      } else {
+        checkSession();
+      }
+    }
+
+    // ===== SERVER COMMUNICATION WRAPPER (GAS Run / Fetch Hybrid) =====
+    async function callServer(action, data = {}) {
+      if (typeof google !== 'undefined' && google.script && google.script.run) {
+        return new Promise((resolve, reject) => {
+          const successHandler = (result) => {
+            if (result && result.error) {
+              reject(new Error(result.error));
+            } else {
+              resolve(result);
+            }
+          };
+          const failureHandler = (err) => {
+            reject(err);
+          };
+          
+          const runner = google.script.run
+            .withSuccessHandler(successHandler)
+            .withFailureHandler(failureHandler);
+            
+          if (action === 'getVisits') {
+            runner.getVisits();
+          } else if (action === 'getConfig') {
+            runner.getConfig();
+          } else if (action === 'getSchools') {
+            runner.getSchools();
+          } else if (action === 'addVisit') {
+            runner.addVisit(data);
+          } else if (action === 'updateVisit') {
+            runner.updateVisit(data);
+          } else if (action === 'deleteVisit') {
+            runner.deleteVisit(data.id);
+          } else if (action === 'saveConfig') {
+            runner.saveConfig(data.lat, data.lng, data.radius);
+          } else if (action === 'addSchool') {
+            runner.addSchool(data);
+          } else if (action === 'login') {
+            runner.loginUser(data.username, data.password);
+          } else if (action === 'getUsers') {
+            runner.getUsers();
+          } else if (action === 'addUser') {
+            runner.addUser(data);
+          } else if (action === 'updateUser') {
+            runner.updateUser(data);
+          } else if (action === 'deleteUser') {
+            runner.deleteUser(data.username);
+          } else {
+            reject(new Error('Unknown server action: ' + action));
+          }
+        });
+      } else {
+        if (!API_URL) {
+          throw new Error("ยังไม่ได้เชื่อมต่อ API (กรุณาตั้งค่า API)");
+        }
+        
+        let url = API_URL;
+        let options = {};
+        
+        if (action === 'getVisits' || action === 'getConfig' || action === 'getSchools') {
+          url = `${API_URL}?action=${action}`;
+          options = { method: 'GET' };
+        } else {
+          options = {
+            method: 'POST',
+            body: JSON.stringify({ action, ...data })
+          };
+        }
+        
+        const response = await fetch(url, options);
+        if (!response.ok) throw new Error("ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้");
+        const resData = await response.json();
+        
+        if (resData.error) {
+          throw new Error(resData.error);
+        }
+        return resData;
+      }
+    }
+
+    // ===== AUTHENTICATION LOGIC =====
+    function checkSession() {
+      // ลงชื่อเข้าใช้งานเป็น Admin (ผู้ดูแลระบบ) โดยอัตโนมัติ เพื่อข้ามหน้า Login
+      currentUser = {
+        username: 'admin',
+        name: 'ผู้ดูแลระบบ',
+        role: 'Admin'
+      };
+      showMainApp();
+    }
+
+    function showLoginScreen() {
+      currentUser = null;
+      document.getElementById('loginOverlay').classList.remove('hidden');
+      document.getElementById('userInfo').style.display = 'none';
+      document.getElementById('btnManageUsers').style.display = 'none';
+      document.getElementById('btnLogout').style.display = 'none';
+    }
+
+    function showMainApp() {
+      document.getElementById('loginOverlay').classList.add('hidden');
+      document.getElementById('userNameDisplay').innerText = currentUser.name;
+      document.getElementById('userInfo').style.display = 'flex';
+      document.getElementById('btnLogout').style.display = 'none'; // ปิดการแสดงปุ่มออกจากระบบ
+      
+      // Auto-set the counselor name in the add modal to the logged-in user's name
+      if (!safeStorage.getItem('last_lector_name')) {
+        safeStorage.setItem('last_lector_name', currentUser.name);
+      }
+      
+      // If Admin, show the user management button
+      if (currentUser.role === 'Admin') {
+        document.getElementById('btnManageUsers').style.display = 'block';
+      } else {
+        document.getElementById('btnManageUsers').style.display = 'none';
+      }
+    }
+
+    async function handleLogin(e) {
+      if (e) e.preventDefault();
+      
+      const usernameInput = document.getElementById('loginUser');
+      const passwordInput = document.getElementById('loginPass');
+      const btnSubmit = document.getElementById('btnLoginSubmit');
+      
+      const username = usernameInput.value.trim();
+      const password = passwordInput.value.trim();
+      
+      if (!username || !password) {
+        alert("กรุณากรอกชื่อผู้ใช้งานและรหัสผ่าน");
+        return;
+      }
+      
+      btnSubmit.disabled = true;
+      btnSubmit.innerText = "กำลังเข้าสู่ระบบ...";
+      
+      try {
+        const resData = await callServer('login', { username, password });
+        
+        if (resData.success && resData.user) {
+          safeSession.setItem('currentUser', JSON.stringify(resData.user));
+          currentUser = resData.user;
+          showMainApp();
+          
+          // Clear inputs
+          usernameInput.value = "";
+          passwordInput.value = "";
+          
+          // Fetch data since we are logged in
+          fetchVisits();
+        } else {
+          throw new Error("เกิดข้อผิดพลาดในการตรวจสอบบัญชี");
+        }
+      } catch (err) {
+        alert("❌ เข้าสู่ระบบล้มเหลว: " + err.message);
+      } finally {
+        btnSubmit.disabled = false;
+        btnSubmit.innerText = "🔑 เข้าสู่ระบบ";
+      }
+    }
+
+    function handleLogout() {
+      if (confirm("คุณต้องการออกจากระบบใช่หรือไม่?")) {
+        safeSession.removeItem('currentUser');
+        showLoginScreen();
+      }
+    }
+
+    function showRegisterForm(e) {
+      if (e) e.preventDefault();
+      document.getElementById('loginForm').style.display = 'none';
+      document.getElementById('registerForm').style.display = 'block';
+      document.querySelector('.login-subtitle').innerText = 'ลงทะเบียนเข้าใช้งานระบบ';
+    }
+
+    function showLoginForm(e) {
+      if (e) e.preventDefault();
+      document.getElementById('registerForm').style.display = 'none';
+      document.getElementById('loginForm').style.display = 'block';
+      document.querySelector('.login-subtitle').innerText = 'ระบบบันทึกข้อมูลการเข้าแนะแนวโรงเรียน';
+    }
+
+    async function handleRegister(e) {
+      if (e) e.preventDefault();
+      
+      const usernameInput = document.getElementById('regUser');
+      const passwordInput = document.getElementById('regPass');
+      const nameInput = document.getElementById('regName');
+      const btnSubmit = document.getElementById('btnRegisterSubmit');
+      
+      const username = usernameInput.value.trim();
+      const password = passwordInput.value.trim();
+      const name = nameInput.value.trim();
+      
+      if (!username || !password || !name) {
+        alert("กรุณากรอกข้อมูลให้ครบถ้วน");
+        return;
+      }
+      
+      if (password.length < 4) {
+        alert("รหัสผ่านควรมีความยาวอย่างน้อย 4 ตัวอักษร");
+        return;
+      }
+      
+      btnSubmit.disabled = true;
+      btnSubmit.innerText = "กำลังลงทะเบียน...";
+      
+      try {
+        const resData = await callServer('addUser', {
+          username,
+          password,
+          name,
+          role: 'User'
+        });
+        
+        if (resData.success) {
+          alert("✅ ลงทะเบียนสำเร็จแล้ว! กำลังเข้าสู่ระบบ...");
+          
+          // Auto login after successful registration
+          const loginRes = await callServer('login', { username, password });
+          if (loginRes.success && loginRes.user) {
+            safeSession.setItem('currentUser', JSON.stringify(loginRes.user));
+            currentUser = loginRes.user;
+            showMainApp();
+            
+            // Clear inputs
+            usernameInput.value = "";
+            passwordInput.value = "";
+            nameInput.value = "";
+            showLoginForm(); // Reset form state
+            
+            fetchVisits();
+          } else {
+            // Fallback: switch to login form
+            showLoginForm();
+            document.getElementById('loginUser').value = username;
+            document.getElementById('loginPass').value = password;
+          }
+        } else {
+          throw new Error(resData.error || "เกิดข้อผิดพลาดในการลงทะเบียน");
+        }
+      } catch (err) {
+        alert("❌ ลงทะเบียนล้มเหลว: " + err.message);
+      } finally {
+        btnSubmit.disabled = false;
+        btnSubmit.innerText = "📝 ลงทะเบียนและเข้าสู่ระบบ";
+      }
+    }
+
+    // ===== USER MANAGEMENT LOGIC (CRUD) =====
+    function openUsersModal() {
+      if (currentUser.role !== 'Admin') return;
+      document.getElementById('usersModal').classList.add('active');
+      fetchUsers();
+    }
+
+    function closeUsersModal() {
+      document.getElementById('usersModal').classList.remove('active');
+    }
+
+    async function fetchUsers() {
+      const tbody = document.getElementById('usersListBody');
+      tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;">⏳ กำลังโหลดข้อมูลผู้ใช้...</td></tr>`;
+      
+      try {
+        allUsers = await callServer('getUsers');
+        renderUsersList(allUsers);
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--danger);">❌ โหลดล้มเหลว: ${err.message}</td></tr>`;
+      }
+    }
+
+    function renderUsersList(users) {
+      const tbody = document.getElementById('usersListBody');
+      tbody.innerHTML = '';
+      
+      if (users.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;">ไม่มีบัญชีผู้ใช้งานอื่นในระบบ</td></tr>`;
+        return;
+      }
+      
+      users.forEach(u => {
+        const tr = document.createElement('tr');
+        const roleBadge = u.role === 'Admin' 
+          ? `<span class="status-badge completed" style="font-size:11px; padding:3px 8px;">Admin</span>` 
+          : `<span class="status-badge pending" style="font-size:11px; padding:3px 8px;">User</span>`;
+        
+        // Disable delete for primary admin
+        const deleteButton = u.username.toLowerCase() === 'admin'
+          ? `<button class="btn btn-danger" style="padding:6px 10px; font-size:11px; opacity:0.5;" disabled>ลบไม่ได้</button>`
+          : `<button class="btn btn-danger" style="padding:6px 10px; font-size:11px;" onclick="deleteUserRecord('${u.username}')">🗑️ ลบ</button>`;
+        
+        tr.innerHTML = `
+          <td><b>${u.username}</b></td>
+          <td>${u.name}</td>
+          <td>${roleBadge}</td>
+          <td style="text-align:right; display:flex; justify-content:flex-end; gap:6px;">
+            <button class="btn btn-secondary" style="padding:6px 10px; font-size:11px;" onclick="openEditUserModal('${u.username}')">✏️ แก้ไข</button>
+            ${deleteButton}
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function openAddUserModal() {
+      document.getElementById('userFormModalTitle').innerText = "เพิ่มผู้ใช้งานใหม่";
+      document.getElementById('userFormMode').value = "add";
+      document.getElementById('userFormUsername').value = "";
+      document.getElementById('userFormUsername').disabled = false;
+      document.getElementById('userFormPassword').value = "";
+      document.getElementById('userFormPassword').placeholder = "ความยาวอย่างน้อย 4 ตัวอักษร";
+      document.getElementById('userFormName').value = "";
+      document.getElementById('userFormRole').value = "User";
+      
+      document.getElementById('userFormModal').classList.add('active');
+    }
+
+    function openEditUserModal(username) {
+      const user = allUsers.find(u => u.username === username);
+      if (!user) return;
+      
+      document.getElementById('userFormModalTitle').innerText = "แก้ไขบัญชีผู้ใช้งาน";
+      document.getElementById('userFormMode').value = "edit";
+      document.getElementById('userFormUsername').value = user.username;
+      document.getElementById('userFormUsername').disabled = true;
+      document.getElementById('userFormPassword').value = user.password;
+      document.getElementById('userFormPassword').placeholder = "";
+      document.getElementById('userFormName').value = user.name;
+      document.getElementById('userFormRole').value = user.role;
+      
+      document.getElementById('userFormModal').classList.add('active');
+    }
+
+    function closeUserFormModal() {
+      document.getElementById('userFormModal').classList.remove('active');
+    }
+
+    async function submitUserForm() {
+      const mode = document.getElementById('userFormMode').value;
+      const username = document.getElementById('userFormUsername').value.trim();
+      const password = document.getElementById('userFormPassword').value.trim();
+      const name = document.getElementById('userFormName').value.trim();
+      const role = document.getElementById('userFormRole').value;
+      
+      if (!username || !password || !name) {
+        alert("กรุณากรอกข้อมูลที่จำเป็นให้ครบถ้วน");
+        return;
+      }
+      
+      if (password.length < 4) {
+        alert("รหัสผ่านควรมีความยาวอย่างน้อย 4 ตัวอักษร");
+        return;
+      }
+      
+      const btnSubmit = document.getElementById('btnSubmitUserForm');
+      btnSubmit.disabled = true;
+      btnSubmit.innerText = "กำลังบันทึก...";
+      
+      const action = mode === 'edit' ? 'updateUser' : 'addUser';
+      
+      try {
+        const resData = await callServer(action, { username, password, name, role });
+        alert("✅ " + resData.message);
+        closeUserFormModal();
+        fetchUsers();
+      } catch (err) {
+        alert("❌ บันทึกล้มเหลว: " + err.message);
+      } finally {
+        btnSubmit.disabled = false;
+        btnSubmit.innerText = "💾 บันทึกข้อมูล";
+      }
+    }
+
+    async function deleteUserRecord(username) {
+      if (username.toLowerCase() === 'admin') {
+        alert("ไม่สามารถลบบัญชีผู้ดูแลระบบหลักได้");
+        return;
+      }
+      
+      if (!confirm(`คุณต้องการลบผู้ใช้งาน "${username}" ใช่หรือไม่?`)) {
+        return;
+      }
+      
+      try {
+        await callServer('deleteUser', { username: username });
+        alert("✅ ลบบัญชีผู้ใช้สำเร็จ");
+        fetchUsers();
+      } catch (err) {
+        alert("❌ ลบล้มเหลว: " + err.message);
+      }
     }
   </script>
 </body>
